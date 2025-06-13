@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}RL训练 - 流感智能防控系统{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h1>强化学习模型训练</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">主页</a></li>
+            <li class="breadcrumb-item active">RL训练</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">上传训练数据</h3>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 请上传训练集数据文件
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">天气数据（训练集）</label>
+                                <input class="form-control" type="file" id="weatherFile" name="weather_file" accept=".xlsx,.xls" required>
+                                <small class="text-muted">例如：weatherSichuan_train.xlsx</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">城市基线数据（训练集）</label>
+                                <input class="form-control" type="file" id="citiesFile" name="cities_file" accept=".xlsx,.xls" required>
+                                <small class="text-muted">例如：cities_baseline_data_train.xlsx</small>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> 上传文件
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 训练按钮 -->
+<div class="row mt-4" id="trainSection" style="display: none;">
+    <div class="col-md-12 text-end">
+        <button id="trainBtn" class="btn btn-success btn-lg">
+            <i class="bi bi-play-circle"></i> 开始训练
+        </button>
+    </div>
+</div>
+
+<!-- 训练进度 -->
+<div class="row mt-4" id="progressSection" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">训练进度</h3>
+            </div>
+            <div class="card-body">
+                <div class="progress" style="height: 30px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" id="trainingProgress">
+                        <span id="progressText">0%</span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <p id="statusText">准备开始训练...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 训练完成 -->
+<div class="row mt-4" id="completeSection" style="display: none;">
+    <div class="col-md-12">
+        <div class="alert alert-success">
+            <h4><i class="bi bi-check-circle"></i> 模型已训练完毕！</h4>
+            <p>强化学习模型训练成功，现在可以进行智慧决策分析。</p>
+            <p class="mb-0" id="trainMessage"></p>
+        </div>
+        <div class="text-center mt-3">
+            <a href="{{ url_for('decision') }}" class="btn btn-primary btn-lg">
+                前往智慧决策 <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 加载提示已移除 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let trainingInterval;
+    
+    // 文件上传
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // 禁用提交按钮
+        $(this).find('button[type="submit"]').prop('disabled', true)
+            .html('<i class="bi bi-hourglass-split"></i> 上传中...');
+        
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: '/upload_rl_train',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                // 恢复按钮
+                $('#uploadForm button[type="submit"]').prop('disabled', false)
+                    .html('<i class="bi bi-upload"></i> 上传文件');
+                    
+                if (response.success) {
+                    alert('文件上传成功！');
+                    $('#trainSection').show();
+                }
+            },
+            error: function(xhr) {
+                // 恢复按钮
+                $('#uploadForm button[type="submit"]').prop('disabled', false)
+                    .html('<i class="bi bi-upload"></i> 上传文件');
+                alert('上传失败：' + xhr.responseJSON.error);
+            }
+        });
+    });
+    
+    // 开始训练
+    $('#trainBtn').on('click', function() {
+        $('#trainSection').hide();
+        $('#progressSection').show();
+        
+        // 开始训练
+        $.ajax({
+            url: '/train_rl',
+            type: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    $('#progressSection').hide();
+                    $('#completeSection').show();
+                    $('#trainMessage').text(response.message);
+                }
+            },
+            error: function(xhr) {
+                clearInterval(trainingInterval);
+                alert('训练失败：' + xhr.responseJSON.error);
+            }
+        });
+        
+        // 模拟进度更新
+        let progress = 0;
+        let statusMessages = [
+            '初始化环境...',
+            '加载数据...',
+            '创建神经网络...',
+            '开始训练第一轮...',
+            '优化参数...',
+            '评估模型性能...',
+            '训练进行中...',
+            '保存模型权重...',
+            '即将完成...'
+        ];
+        
+        trainingInterval = setInterval(function() {
+            progress += Math.random() * 5 + 2;
+            if (progress > 95) progress = 95;
+            
+            $('#trainingProgress').css('width', progress + '%');
+            $('#progressText').text(Math.floor(progress) + '%');
+            
+            // 更新状态文本
+            let messageIndex = Math.floor(progress / 100 * statusMessages.length);
+            if (messageIndex < statusMessages.length) {
+                $('#statusText').text(statusMessages[messageIndex]);
+            }
+            
+            if (progress >= 95) {
+                clearInterval(trainingInterval);
+                $('#trainingProgress').css('width', '100%');
+                $('#progressText').text('100%');
+                $('#statusText').text('训练完成！');
+            }
+        }, 1000);
+    });
+});
+</script>
+{% endblock %}

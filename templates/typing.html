@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}分型结果 - 流感智能防控系统{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h1>病毒分型分析</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">主页</a></li>
+            <li class="breadcrumb-item active">分型结果</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">上传样本数据</h3>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">选择Excel文件 (sample_data.xlsx)</label>
+                        <input class="form-control" type="file" id="fileInput" accept=".xlsx,.xls" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> 上传文件
+                    </button>
+                </form>
+                
+                <div class="mt-4">
+                    <h5>文件格式示例：</h5>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>sample_id</th>
+                                <th>city_id</th>
+                                <th>seq</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>S001</td>
+                                <td>C01</td>
+                                <td>ATCGATCGATCG...</td>
+                            </tr>
+                            <tr>
+                                <td>S002</td>
+                                <td>C01</td>
+                                <td>GCTAGCTAGCTA...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4" id="analyzeSection" style="display: none;">
+    <div class="col-md-12 text-end">
+        <button id="analyzeBtn" class="btn btn-success btn-lg">
+            <i class="bi bi-play-circle"></i> 分析
+        </button>
+    </div>
+</div>
+
+<div class="row mt-4" id="resultsSection" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">分型分析结果</h3>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="resultTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#results">分型结果</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#distribution">分型分布</a>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-3">
+                    <div class="tab-pane fade show active" id="results">
+                        <div id="resultsTable"></div>
+                    </div>
+                    <div class="tab-pane fade" id="distribution">
+                        <div id="distributionTable"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 加载提示已移除 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 文件上传
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData();
+        var fileInput = $('#fileInput')[0];
+        formData.append('file', fileInput.files[0]);
+        
+        $.ajax({
+            url: '/upload_typing',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('文件上传成功！');
+                    $('#analyzeSection').show();
+                } else {
+                    alert('上传失败：' + response.error);
+                }
+            },
+            error: function(xhr) {
+                alert('上传失败：' + xhr.responseJSON.error);
+            }
+        });
+    });
+    
+    // 分析按钮
+    $('#analyzeBtn').on('click', function() {
+        // 禁用按钮防止重复点击
+        $(this).prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> 分析中...');
+        
+        $.ajax({
+            url: '/analyze_typing',
+            type: 'POST',
+            success: function(response) {
+                // 恢复按钮
+                $('#analyzeBtn').prop('disabled', false).html('<i class="bi bi-play-circle"></i> 分析');
+                
+                if (response.success) {
+                    $('#resultsTable').html(response.results_table);
+                    $('#distributionTable').html(response.distribution_table);
+                    $('#resultsSection').show();
+                } else {
+                    alert('分析失败：' + response.error);
+                }
+            },
+            error: function(xhr) {
+                // 恢复按钮
+                $('#analyzeBtn').prop('disabled', false).html('<i class="bi bi-play-circle"></i> 分析');
+                alert('分析失败：' + xhr.responseJSON.error);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

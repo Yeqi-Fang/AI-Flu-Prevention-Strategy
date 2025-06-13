@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}主页 - 流感智能防控系统{% endblock %}
+
+{% block content %}
+<div class="welcome-container">
+    <div class="text-center">
+        <h1 class="display-4 mb-4">欢迎访问流感智能防控系统</h1>
+        <p class="lead mb-5">融合多模态流行病学数据的全生命周期强化学习流感处置模式</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card shadow-lg">
+                    <div class="card-body p-5">
+                        <h2 class="card-title mb-4">系统介绍</h2>
+                        <p class="card-text">
+                            本系统旨在增强以流感为代表的急性呼吸道传染病早期监测预警能力，是健全公共卫生体系的重要工具。
+                            当前流感防控面临多谱系叠加跨区流动，以及多源监测数据异质、目标冲突等挑战。
+                        </p>
+                        <p class="card-text">
+                            系统围绕流感等呼吸道疾病的"全生命周期数智处置模式"体系，通过以下核心功能实现智能防控：
+                        </p>
+                        
+                        <div class="row mt-5">
+                            <div class="col-md-6 mb-3">
+                                <div class="feature-box">
+                                    <i class="bi bi-virus feature-icon"></i>
+                                    <h4>精准分型分类</h4>
+                                    <p>通过WBE监测的流感分型、哨点病例与医院影像实时接入实现精准分型分类</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="feature-box">
+                                    <i class="bi bi-graph-up feature-icon"></i>
+                                    <h4>参数动态估计</h4>
+                                    <p>经过MCMC-PMCMC与传播动力学模型同化估计不同分型的关键参数</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="feature-box">
+                                    <i class="bi bi-cpu feature-icon"></i>
+                                    <h4>强化学习优化</h4>
+                                    <p>利用SEIQR-Dueling DQN按时空异质性优化防控策略组合</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="feature-box">
+                                    <i class="bi bi-lightbulb feature-icon"></i>
+                                    <h4>智慧决策支持</h4>
+                                    <p>结合强化学习策略优化分型与影像的检验策略，实现区域差异化防控</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-5">
+                            <a href="{{ url_for('typing') }}" class="btn btn-primary btn-lg">开始使用</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

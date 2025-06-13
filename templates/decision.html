@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}智慧决策 - 流感智能防控系统{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h1>智慧决策分析</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">主页</a></li>
+            <li class="breadcrumb-item active">智慧决策</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">上传测试数据</h3>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 请上传测试集数据文件，系统将基于训练好的模型生成最优防控策略
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">天气数据（测试集）</label>
+                                <input class="form-control" type="file" id="weatherFile" name="weather_file" accept=".xlsx,.xls" required>
+                                <small class="text-muted">例如：weatherSichuan_test.xlsx</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">城市基线数据（测试集）</label>
+                                <input class="form-control" type="file" id="citiesFile" name="cities_file" accept=".xlsx,.xls" required>
+                                <small class="text-muted">例如：cities_baseline_data_test.xlsx</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h5>数据格式示例：</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>天气数据格式</h6>
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>date</th>
+                                            <th>tmean</th>
+                                            <th>humidity</th>
+                                            <th>pressure</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>2024-01-01</td>
+                                            <td>15.2</td>
+                                            <td>75</td>
+                                            <td>1013</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>城市基线数据格式</h6>
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>city_id</th>
+                                            <th>name</th>
+                                            <th>population</th>
+                                            <th>city_type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>C01</td>
+                                            <td>成都</td>
+                                            <td>2093.8</td>
+                                            <td>1</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> 上传文件
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 决策按钮 -->
+<div class="row mt-4" id="decisionSection" style="display: none;">
+    <div class="col-md-12 text-end">
+        <button id="decisionBtn" class="btn btn-success btn-lg">
+            <i class="bi bi-lightbulb"></i> 获取智慧决策
+        </button>
+    </div>
+</div>
+
+<!-- 决策结果 -->
+<div class="row mt-4" id="resultsSection" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">防控策略建议</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <img id="strategyPlot" class="img-fluid" alt="防控策略图">
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <h5>策略说明</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                <strong>口罩佩戴策略：</strong>根据疫情发展动态调整口罩佩戴要求
+                            </li>
+                            <li class="list-group-item">
+                                <strong>居家隔离策略：</strong>基于感染率制定分级隔离措施
+                            </li>
+                            <li class="list-group-item">
+                                <strong>医疗资源投入：</strong>优化医疗资源配置，确保救治能力
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <a id="downloadBtn" class="btn btn-primary" download>
+                        <i class="bi bi-download"></i> 下载详细结果 (Excel)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 加载提示已移除 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 文件上传
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // 禁用提交按钮
+        $(this).find('button[type="submit"]').prop('disabled', true)
+            .html('<i class="bi bi-hourglass-split"></i> 上传中...');
+        
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: '/upload_decision',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                // 恢复按钮
+                $('#uploadForm button[type="submit"]').prop('disabled', false)
+                    .html('<i class="bi bi-upload"></i> 上传文件');
+                    
+                if (response.success) {
+                    alert('文件上传成功！');
+                    $('#decisionSection').show();
+                }
+            },
+            error: function(xhr) {
+                // 恢复按钮
+                $('#uploadForm button[type="submit"]').prop('disabled', false)
+                    .html('<i class="bi bi-upload"></i> 上传文件');
+                alert('上传失败：' + xhr.responseJSON.error);
+            }
+        });
+    });
+    
+    // 获取决策
+    $('#decisionBtn').on('click', function() {
+        // 禁用按钮并显示处理中
+        $(this).prop('disabled', true)
+            .html('<i class="bi bi-hourglass-split"></i> 正在生成决策方案...');
+        
+        $.ajax({
+            url: '/get_decision',
+            type: 'POST',
+            success: function(response) {
+                // 恢复按钮
+                $('#decisionBtn').prop('disabled', false)
+                    .html('<i class="bi bi-lightbulb"></i> 获取智慧决策');
+                
+                if (response.success) {
+                    $('#strategyPlot').attr('src', response.plot_url);
+                    $('#downloadBtn').attr('href', response.excel_url);
+                    $('#resultsSection').show();
+                    
+                    // 滚动到结果部分
+                    $('html, body').animate({
+                        scrollTop: $('#resultsSection').offset().top - 100
+                    }, 1000);
+                }
+            },
+            error: function(xhr) {
+                // 恢复按钮
+                $('#decisionBtn').prop('disabled', false)
+                    .html('<i class="bi bi-lightbulb"></i> 获取智慧决策');
+                alert('决策生成失败：' + xhr.responseJSON.error);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

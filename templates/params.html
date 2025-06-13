@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block title %}传播动力学参数拟合 - 流感智能防控系统{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <h1>传播动力学参数拟合</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">主页</a></li>
+            <li class="breadcrumb-item active">传播动力学参数拟合</li>
+        </ol>
+    </nav>
+</div>
+
+<!-- 进度条 -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="progress-container">
+            <div class="progress" style="height: 30px;">
+                <div class="progress-bar progress-bar-striped" role="progressbar" 
+                     style="width: 0%;" id="baseProgress">
+                    基础参数
+                </div>
+                <div class="progress-bar progress-bar-striped bg-success" role="progressbar" 
+                     style="width: 0%;" id="weatherProgress">
+                    气候驱动
+                </div>
+                <div class="progress-bar progress-bar-striped bg-info" role="progressbar" 
+                     style="width: 0%;" id="cityProgress">
+                    城市驱动
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 文件上传区域 -->
+<div class="row" id="uploadSection">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">上传数据文件</h3>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">天气数据 (weatherSichuan.xlsx)</label>
+                                <input class="form-control" type="file" id="weatherFile" name="weather_file" accept=".xlsx,.xls" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">城市基线数据 (cities_baseline_data.xlsx)</label>
+                                <input class="form-control" type="file" id="citiesFile" name="cities_file" accept=".xlsx,.xls" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">ILI数据 (all_ILI.xlsx)</label>
+                                <input class="form-control" type="file" id="iliFile" name="ili_file" accept=".xlsx,.xls" required>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> 上传文件
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 分析按钮 -->
+<div class="row mt-4" id="analyzeSection" style="display: none;">
+    <div class="col-md-12 text-end">
+        <button id="analyzeBtn" class="btn btn-success btn-lg">
+            <i class="bi bi-play-circle"></i> 分析
+        </button>
+    </div>
+</div>
+
+<!-- 基础参数结果 -->
+<div class="row mt-4" id="baseResults" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">基础参数估计结果</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>优化过程</h5>
+                        <img id="baseOptPlot" class="img-fluid" alt="优化过程图">
+                    </div>
+                    <div class="col-md-6">
+                        <h5>预测对比</h5>
+                        <img id="basePredPlot" class="img-fluid" alt="预测对比图">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h5>估计参数值</h5>
+                    <div id="baseParams"></div>
+                </div>
+                <div class="text-end mt-3">
+                    <button id="nextToWeather" class="btn btn-primary">下一步</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 天气参数结果 -->
+<div class="row mt-4" id="weatherResults" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">气候驱动参数估计结果</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>优化过程</h5>
+                        <img id="weatherOptPlot" class="img-fluid" alt="优化过程图">
+                    </div>
+                    <div class="col-md-6">
+                        <h5>预测对比</h5>
+                        <img id="weatherPredPlot" class="img-fluid" alt="预测对比图">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h5>估计参数值</h5>
+                    <div id="weatherParams"></div>
+                </div>
+                <div class="text-end mt-3">
+                    <button id="nextToCity" class="btn btn-primary">下一步</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 城市参数上传 -->
+<div class="row mt-4" id="cityUpload" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">上传城市ILI数据</h3>
+            </div>
+            <div class="card-body">
+                <form id="cityUploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">城市ILI数据 (city_ILIp.xlsx)</label>
+                        <input class="form-control" type="file" id="cityIliFile" name="city_ili_file" accept=".xlsx,.xls" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> 上传并分析
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 城市参数结果 -->
+<div class="row mt-4" id="cityResults" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">城市驱动参数估计结果</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>优化过程</h5>
+                        <img id="cityOptPlot" class="img-fluid" alt="优化过程图">
+                    </div>
+                    <div class="col-md-6">
+                        <h5>预测对比</h5>
+                        <img id="cityPredPlot" class="img-fluid" alt="预测对比图">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h5>估计参数值</h5>
+                    <div id="cityParams"></div>
+                </div>
+                <div class="mt-4">
+                    <h5>所有参数汇总</h5>
+                    <div id="allParams"></div>
+                </div>
+                <div class="text-end mt-3">
+                    <button id="completeBtn" class="btn btn-success">完成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 完成提示 -->
+<div class="row mt-4" id="completeSection" style="display: none;">
+    <div class="col-md-12">
+        <div class="alert alert-success text-center">
+            <h4><i class="bi bi-check-circle"></i> 参数已拟合完成！</h4>
+            <p>所有参数已成功估计，可以进行下一步的RL训练。</p>
+        </div>
+    </div>
+</div>
+
+<!-- 加载提示已移除 -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let currentStage = 'upload';
+    
+    // 更新进度条
+    function updateProgressBar(stage) {
+        if (stage === 'base') {
+            $('#baseProgress').css('width', '33.33%');
+        } else if (stage === 'weather') {
+            $('#baseProgress').css('width', '33.33%');
+            $('#weatherProgress').css('width', '33.33%');
+        } else if (stage === 'city') {
+            $('#baseProgress').css('width', '33.33%');
+            $('#weatherProgress').css('width', '33.33%');
+            $('#cityProgress').css('width', '33.34%');
+        }
+    }
+    
+    // 显示参数表格
+    function displayParams(params, containerId) {
+        let html = '<table class="table table-bordered"><tbody>';
+        for (let key in params) {
+            html += `<tr><td>${key}</td><td>${params[key].toFixed(6)}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        $(containerId).html(html);
+    }
+    
+    // 文件上传
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = new FormData(this);
+        
+        $.ajax({
+            url: '/upload_params',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert('文件上传成功！');
+                    $('#analyzeSection').show();
+                }
+            },
+            error: function(xhr) {
+                alert('上传失败：' + xhr.responseJSON.error);
+            }
+        });
+    });
+    
+    // 开始分析
+    $('#analyzeBtn').on('click', function() {
+        currentStage = 'base';
+        analyzeStage('base');
+    });
+    
+    // 分析特定阶段
+    function analyzeStage(stage) {
+        let $btn = stage === 'base' ? $('#analyzeBtn') : 
+                   stage === 'weather' ? $('#nextToWeather') : 
+                   $('#cityUploadForm button[type="submit"]');
+        
+        // 禁用按钮
+        $btn.prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> 处理中...');
+        
+        $.ajax({
+            url: `/analyze_params/${stage}`,
+            type: 'POST',
+            data: stage === 'city' ? new FormData($('#cityUploadForm')[0]) : {},
+            processData: stage !== 'city',
+            contentType: stage === 'city' ? false : 'application/x-www-form-urlencoded; charset=UTF-8',
+            success: function(response) {
+                // 恢复按钮
+                $btn.prop('disabled', false);
+                if (stage === 'base') $btn.html('<i class="bi bi-play-circle"></i> 分析');
+                else if (stage === 'weather') $btn.html('下一步');
+                else $btn.html('<i class="bi bi-upload"></i> 上传并分析');
+                
+                if (response.success) {
+                    updateProgressBar(stage);
+                    
+                    if (stage === 'base') {
+                        $('#uploadSection').hide();
+                        $('#analyzeSection').hide();
+                        $('#baseOptPlot').attr('src', response.optimization_plot);
+                        $('#basePredPlot').attr('src', response.prediction_plot);
+                        displayParams(response.parameters, '#baseParams');
+                        $('#baseResults').show();
+                    } else if (stage === 'weather') {
+                        $('#baseResults').hide();
+                        $('#weatherOptPlot').attr('src', response.optimization_plot);
+                        $('#weatherPredPlot').attr('src', response.prediction_plot);
+                        displayParams(response.parameters, '#weatherParams');
+                        $('#weatherResults').show();
+                    } else if (stage === 'city') {
+                        $('#cityUpload').hide();
+                        $('#cityOptPlot').attr('src', response.optimization_plot);
+                        $('#cityPredPlot').attr('src', response.prediction_plot);
+                        displayParams(response.parameters, '#cityParams');
+                        displayParams(response.all_parameters, '#allParams');
+                        $('#cityResults').show();
+                    }
+                }
+            },
+            error: function(xhr) {
+                // 恢复按钮
+                $btn.prop('disabled', false);
+                if (stage === 'base') $btn.html('<i class="bi bi-play-circle"></i> 分析');
+                else if (stage === 'weather') $btn.html('下一步');
+                else $btn.html('<i class="bi bi-upload"></i> 上传并分析');
+                
+                alert('分析失败：' + xhr.responseJSON.error);
+            }
+        });
+    }
+    
+    // 下一步按钮
+    $('#nextToWeather').on('click', function() {
+        currentStage = 'weather';
+        analyzeStage('weather');
+    });
+    
+    $('#nextToCity').on('click', function() {
+        $('#weatherResults').hide();
+        $('#cityUpload').show();
+    });
+    
+    // 城市ILI数据上传
+    $('#cityUploadForm').on('submit', function(e) {
+        e.preventDefault();
+        currentStage = 'city';
+        analyzeStage('city');
+    });
+    
+    // 完成按钮
+    $('#completeBtn').on('click', function() {
+        $('#cityResults').hide();
+        $('#completeSection').show();
+        // 显示给定的图片
+        if (window.givenImage) {
+            $('#completeSection').append('<div class="text-center mt-4"><img src="' + window.givenImage + '" class="img-fluid" alt="结果图"></div>');
+        }
+    });
+});
+</script>
+{% endblock %}
