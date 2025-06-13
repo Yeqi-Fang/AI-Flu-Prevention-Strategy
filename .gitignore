@@ -1,0 +1,7 @@
+*.pyc
+*.pyi
+__pycache__/
+*.xlsx
+*.xml
+*.fasta
+*.pth
