@@ -502,7 +502,8 @@ def progress(task):
 
 if __name__ == '__main__':
     # 设置matplotlib字体
-    plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
-    plt.rcParams['axes.unicode_minus'] = False
+    import matplotlib as mpl
+    mpl.rcParams["font.family"] = "SimHei"
+    mpl.rcParams["axes.unicode_minus"] = False
     
     app.run(debug=True, port=5000)
