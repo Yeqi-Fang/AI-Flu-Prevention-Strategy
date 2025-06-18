@@ -1,8 +1,6 @@
 *.pyc
 *.pyi
 __pycache__/
-*.xlsx
 *.xml
-*.fasta
 *.pth
 src/rl/2.3.0
